@@ -189,15 +189,15 @@
             errorLabelContainer: "#message_error_message_box",
 
             rules: {
-                msg_uid: "required",
-                msg_pwd: "required",
-                msg_src: "required"
+                // msg_uid: "required",
+                // msg_pwd: "required",
+                // msg_src: "required"
             },
 
             messages: {
-                msg_uid: "<?= lang('Config.msg_uid_required') ?>",
-                msg_pwd: "<?= lang('Config.msg_pwd_required') ?>",
-                msg_src: "<?= lang('Config.msg_src_required') ?>"
+                // msg_uid: "<?= lang('Config.msg_uid_required') ?>",
+                // msg_pwd: "<?= lang('Config.msg_pwd_required') ?>",
+                // msg_src: "<?= lang('Config.msg_src_required') ?>"
             }
         }));
 
