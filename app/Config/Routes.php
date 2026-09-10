@@ -40,3 +40,6 @@ $routes->add('reports/specific_customers', 'Reports::specific_customer_input');
 $routes->add('reports/specific_employees', 'Reports::specific_employee_input');
 $routes->add('reports/specific_discounts', 'Reports::specific_discount_input');
 $routes->add('reports/specific_suppliers', 'Reports::specific_supplier_input');
+
+$routes->get('whatsapp_webhook', 'Whatsapp_webhook::index');
+$routes->post('whatsapp_webhook', 'Whatsapp_webhook::index');

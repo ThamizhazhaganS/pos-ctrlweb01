@@ -27,9 +27,9 @@ class Database extends Config
     public array $default = [
         'DSN'          => '',
         'hostname'     => 'localhost',
-        'username'     => 'u966381791_testwa',
-        'password'     => 'Pointofsale1',
-        'database'     => 'u966381791_testwa',
+        'username'     => 'admin',
+        'password'     => 'pointofsale',
+        'database'     => 'ospos',
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => 'ospos_',
         'pConnect'     => false,
