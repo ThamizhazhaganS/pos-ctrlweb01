@@ -65,7 +65,7 @@ class App extends BaseConfig
      *
      * @var list<string>
      */
-    public array $allowedHostnames = [];
+    public array $allowedHostnames = ['localhost', '127.0.0.1', 'localhost:8080', '127.0.0.1:8080'];
 
     /**
      * --------------------------------------------------------------------------
@@ -343,7 +343,8 @@ class App extends BaseConfig
             return 'localhost';
         }
 
-        if (in_array($httpHost, $this->allowedHostnames, true)) {
+        $hostOnly = explode(':', $httpHost)[0];
+        if (in_array($httpHost, $this->allowedHostnames, true) || in_array($hostOnly, $this->allowedHostnames, true)) {
             return $httpHost;
         }
 

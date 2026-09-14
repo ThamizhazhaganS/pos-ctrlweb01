@@ -947,14 +947,27 @@ class Sales extends Secure_Controller
                         $receipt_link = base_url('uploads/' . $pdf_filename);
                         
                         if ($provider === 'meta' && !empty($this->config['meta_receipt_template'])) {
-                            // Send via Meta Template
-                            $whatsapp->sendTemplate(
-                                $customer_info->phone_number, 
-                                $this->config['meta_receipt_template'], 
-                                'document', 
-                                $receipt_link, 
-                                $pdf_filename
-                            );
+                            // Build body params: {{1}}=CustomerName, {{2}}=InvoiceNo, {{3}}=Total, {{4}}=PDF Link
+                            $custName   = trim($data['first_name'] ?? '');
+                            if (empty($custName)) { $custName = trim($data['customer'] ?? '') ?: 'Customer'; }
+                            $invoiceNum = $data['invoice_number'] ?? $data['sale_id'];
+                            $total      = isset($data['total']) ? number_format((float)$data['total'], 2) : '0.00';
+                            $bodyParams = [$custName, (string)$invoiceNum, $total, $receipt_link];
+                            $buttonParam = $pdf_filename;
+                            try {
+                                $whatsapp->sendTemplate(
+                                    $customer_info->phone_number,
+                                    $this->config['meta_receipt_template'],
+                                    null,
+                                    null,
+                                    null,
+                                    $bodyParams,
+                                    $buttonParam
+                                );
+                                log_message('info', 'WhatsApp: Template message sent for sale ' . $data['sale_id_num']);
+                            } catch (\Throwable $e) {
+                                log_message('error', 'WhatsApp: Failed to send: ' . $e->getMessage());
+                            }
                         } else {
                             // Send via Twilio (or standard free-form Meta message)
                             $whatsapp_message = $this->config['whatsapp_receipt_message'] ?? 'Thank you for your purchase! Here is your receipt: ';

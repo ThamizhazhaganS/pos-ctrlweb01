@@ -1,0 +1,50 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * This file is part of CodeIgniter 4 framework.
+ *
+ * (c) CodeIgniter Foundation <admin@codeigniter.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
+use CodeIgniter\Boot;
+use Config\Paths;
+
+// Refuse to run when called from php-cgi
+if (str_starts_with(PHP_SAPI, 'cgi')) {
+    exit("The cli tool is not supported when running php-cgi. It needs php-cli to function!\n\n");
+}
+
+$minPhpVersion = '8.2';
+if (version_compare(PHP_VERSION, $minPhpVersion, '<')) {
+    $message = sprintf(
+        'Your PHP version must be %s or higher to run CodeIgniter. Current version: %s',
+        $minPhpVersion,
+        PHP_VERSION
+    );
+
+    exit($message);
+}
+
+// We want errors to be shown when using it from the CLI.
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+
+// Path to the front controller
+define('FCPATH', __DIR__ . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR);
+
+// Ensure the current directory is pointing to the front controller's directory
+chdir(FCPATH);
+
+// LOAD OUR PATHS CONFIG FILE
+require FCPATH . '../app/Config/Paths.php';
+
+$paths = new Paths();
+
+// LOAD THE FRAMEWORK BOOTSTRAP FILE
+require $paths->systemDirectory . '/Boot.php';
+
+exit(Boot::bootSpark($paths));

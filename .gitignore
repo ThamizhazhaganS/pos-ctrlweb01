@@ -1,0 +1,28 @@
+﻿# Environment & Local Secrets
+.env
+cookies.txt
+
+# Generated Receipts & Uploads
+public/uploads/*.pdf
+!public/uploads/index.html
+
+# CodeIgniter Writable Directories
+writable/cache/*
+!writable/cache/index.html
+writable/debugbar/*
+writable/logs/*
+!writable/logs/index.html
+writable/session/*
+!writable/session/index.html
+writable/uploads/*
+!writable/uploads/index.html
+
+# Generated vendor font metadata
+vendor/dompdf/dompdf/lib/fonts/*.json
+
+# OS / Editor Files
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/

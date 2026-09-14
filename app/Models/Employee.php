@@ -373,13 +373,13 @@ class Employee extends Person
             $row = $query->getRow();
 
             // Compare passwords depending on the hash version
-            if ($row->hash_version === '1' && $row->password === md5($password)) {
+            if ((string)$row->hash_version === '1' && $row->password === md5($password)) {
                 $builder->where('person_id', $row->person_id);
                 $this->session->set('person_id', $row->person_id);
                 $password_hash = password_hash($password, PASSWORD_DEFAULT);
 
                 return $builder->update(['hash_version' => 2, 'password' => $password_hash]);
-            } elseif ($row->hash_version === '2' && password_verify($password, $row->password)) {
+            } elseif ((string)$row->hash_version === '2' && password_verify($password, $row->password)) {
                 $this->session->set('person_id', $row->person_id);
 
                 return true;
