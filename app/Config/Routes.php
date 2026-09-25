@@ -43,3 +43,10 @@ $routes->add('reports/specific_suppliers', 'Reports::specific_supplier_input');
 
 $routes->get('whatsapp_webhook', 'Whatsapp_webhook::index');
 $routes->post('whatsapp_webhook', 'Whatsapp_webhook::index');
+
+
+$routes->get('messages', 'Messages::getIndex');
+$routes->post('messages/send', 'Messages::postSend');
+$routes->post('messages/send/(:any)', 'Messages::postSend/$1');
+$routes->post('messages/send_form', 'Messages::postSendForm');
+$routes->post('messages/send_form/(:any)', 'Messages::postSendForm/$1');

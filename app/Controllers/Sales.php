@@ -935,11 +935,13 @@ class Sales extends Secure_Controller
 
                     if (($provider === 'twilio' && $has_twilio) || ($provider === 'meta' && $has_meta)) {
                         $view = \Config\Services::renderer();
-                        $html = $view->setData($data)->render('sales/receipt', $data);
+                        $data['img_tag'] = $this->email_lib->buildLogoImgTag();
+                        $html = $view->setData($data)->render('sales/receipt_email', $data);
                         
                         helper(['dompdf', 'file']);
                         $pdf_content = create_pdf($html);
-                        $pdf_filename = 'receipt_' . $data['sale_id_num'] . '.pdf';
+                        $pdf_filename = 'GraffKids_Receipt_' . $data['sale_id_num'] . '.pdf'; // unique server file
+                        $pdf_display_name = 'GraffKids_Receipt.pdf'; // clean name for customer
                         $pdf_path = FCPATH . 'uploads/' . $pdf_filename;
                         file_put_contents($pdf_path, $pdf_content);
 
@@ -947,23 +949,37 @@ class Sales extends Secure_Controller
                         $receipt_link = base_url('uploads/' . $pdf_filename);
                         
                         if ($provider === 'meta' && !empty($this->config['meta_receipt_template'])) {
-                            // Build body params: {{1}}=CustomerName, {{2}}=InvoiceNo, {{3}}=Total, {{4}}=PDF Link
-                            $custName   = trim($data['first_name'] ?? '');
+                            $templateName = trim($this->config['meta_receipt_template']);
+                            $custName     = trim($data['first_name'] ?? '');
                             if (empty($custName)) { $custName = trim($data['customer'] ?? '') ?: 'Customer'; }
-                            $invoiceNum = $data['invoice_number'] ?? $data['sale_id'];
-                            $total      = isset($data['total']) ? number_format((float)$data['total'], 2) : '0.00';
-                            $bodyParams = [$custName, (string)$invoiceNum, $total, $receipt_link];
-                            $buttonParam = $pdf_filename;
+                            $invoiceNum   = $data['invoice_number'] ?? $data['sale_id'];
+                            $total        = isset($data['total']) ? number_format((float)$data['total'], 2) : '0.00';
                             try {
-                                $whatsapp->sendTemplate(
-                                    $customer_info->phone_number,
-                                    $this->config['meta_receipt_template'],
-                                    null,
-                                    null,
-                                    null,
-                                    $bodyParams,
-                                    $buttonParam
-                                );
+                                if ($templateName === 'taz_cloth' || $templateName === 'graff_kids_bill') {
+                                    // taz_cloth has Document Header (PDF) and 2 Body params: {{1}}=Name, {{2}}=Invoice
+                                    $media_id = $whatsapp->uploadMedia($pdf_content, $pdf_filename);
+                                    $bodyParams = [$custName];
+                                    $whatsapp->sendTemplateWithMediaId(
+                                        $customer_info->phone_number,
+                                        $templateName,
+                                        $media_id,
+                                        $pdf_display_name,
+                                        $bodyParams
+                                    );
+                                } else {
+                                    // Legacy template (e.g. tamil_store_receip) with 4 params and URL button
+                                    $bodyParams  = [$custName, (string)$invoiceNum, $total, $receipt_link];
+                                    $buttonParam = $pdf_filename;
+                                    $whatsapp->sendTemplate(
+                                        $customer_info->phone_number,
+                                        $templateName,
+                                        null,
+                                        null,
+                                        null,
+                                        $bodyParams,
+                                        $buttonParam
+                                    );
+                                }
                                 log_message('info', 'WhatsApp: Template message sent for sale ' . $data['sale_id_num']);
                             } catch (\Throwable $e) {
                                 log_message('error', 'WhatsApp: Failed to send: ' . $e->getMessage());

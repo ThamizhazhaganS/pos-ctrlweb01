@@ -199,14 +199,37 @@ helper('url');
                             </td>
 
                             <td>
-                                <?php
-                                if ($item['is_serialized']) {
-                                    echo to_quantity_decimals($item['quantity']);
-                                    echo form_hidden('quantity', $item['quantity']);
-                                } else {
-                                    echo form_input(['name' => 'quantity', 'class' => 'form-control input-sm', 'value' => to_quantity_decimals($item['quantity']), 'tabindex' => ++$tabindex, 'onClick' => 'this.select();']);
-                                }
-                                ?>
+                                <?php if ($item['is_serialized']): ?>
+                                    <span class="text-muted" style="font-size:12px; padding: 0 6px;">
+                                        <?= to_quantity_decimals($item['quantity']) ?>
+                                    </span>
+                                    <?= form_hidden('quantity', $item['quantity']) ?>
+                                <?php else: ?>
+                                    <div class="input-group input-group-sm qty-stepper" style="width: 110px; flex-wrap: nowrap;">
+                                        <span class="input-group-btn">
+                                            <button type="button" class="btn btn-default btn-sm qty-minus"
+                                                    data-line="<?= $line ?>"
+                                                    style="background:#f0f0f0; border-color:#ccc; padding:2px 7px; font-weight:bold; font-size:14px; line-height:1.2;"
+                                                    tabindex="-1">&#8722;</button>
+                                        </span>
+                                        <input type="number"
+                                               name="quantity"
+                                               id="qty_<?= $line ?>"
+                                               class="form-control input-sm text-center qty-input"
+                                               style="min-width:42px; font-weight:600; border-left:0; border-right:0; padding:2px 4px;"
+                                               value="<?= to_quantity_decimals($item['quantity']) ?>"
+                                               min="1"
+                                               step="1"
+                                               tabindex="<?= ++$tabindex ?>"
+                                               onclick="this.select();" />
+                                        <span class="input-group-btn">
+                                            <button type="button" class="btn btn-sm qty-plus"
+                                                    data-line="<?= $line ?>"
+                                                    style="background:#2196F3; color:#fff; border-color:#1976D2; padding:2px 7px; font-weight:bold; font-size:14px; line-height:1.2;"
+                                                    tabindex="-1">&#43;</button>
+                                        </span>
+                                    </div>
+                                <?php endif; ?>
                             </td>
 
                             <td>
@@ -243,41 +266,63 @@ helper('url');
                                 <td> </td>
                             <?php } else { ?>
                                 <td>&nbsp;</td>
-                                <?php if ($item['allow_alt_description']) { ?>
-                                    <td style="color: #2F4F4F;"><?= lang(ucfirst($controller_name) . '.description_abbrv') ?></td>
-                                <?php } ?>
+                                <td colspan="7" style="text-align: left; padding: 2px 8px 8px 8px;">
+                                    <?php $has_desc = !empty(trim($item['description'] ?? '')); ?>
+                                    <div class="form-inline" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                        <!-- Add Description Button in blue color with small plus sign -->
+                                        <button type="button" 
+                                                class="btn btn-xs btn-add-desc <?= $has_desc ? 'hidden' : '' ?>" 
+                                                id="btn_add_desc_<?= $line ?>" 
+                                                onclick="$(this).addClass('hidden'); $('#desc_wrapper_<?= $line ?>').removeClass('hidden'); $('#desc_input_<?= $line ?>').focus();"
+                                                style="background-color: #2196F3; color: #ffffff; border: 1px solid #1976D2; font-weight: 600; font-size: 11px; padding: 4px 10px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.15); display: inline-flex; align-items: center; gap: 4px; cursor: pointer;"
+                                                onmouseover="this.style.backgroundColor='#1976D2';" 
+                                                onmouseout="this.style.backgroundColor='#2196F3';">
+                                            <span class="glyphicon glyphicon-plus" style="font-size: 9px;"></span> Add Description
+                                        </button>
 
-                                <td colspan="2" style="text-align: left;">
-                                    <?php
-                                    if ($item['allow_alt_description']) {
-                                        echo form_input(['name' => 'description', 'class' => 'form-control input-sm', 'value' => $item['description'], 'onClick' => 'this.select();']);
-                                    } else {
-                                        if ($item['description'] != '') {
-                                            echo esc($item['description']);
-                                            echo form_hidden('description', $item['description']);
-                                        } else {
-                                            echo lang(ucfirst($controller_name) . '.no_description');
-                                            echo form_hidden('description', '');
-                                        }
-                                    }
-                                    ?>
-                                </td>
-                                <td>&nbsp;</td>
-                                <td style="color: #2F4F4F;">
-                                    <?php
-                                    if ($item['is_serialized']) {
-                                        echo lang(ucfirst($controller_name) . '.serial');
-                                    }
-                                    ?>
-                                </td>
-                                <td colspan="4" style="text-align: left;">
-                                    <?php
-                                    if ($item['is_serialized']) {
-                                        echo form_input(['name' => 'serialnumber', 'class' => 'form-control input-sm', 'value' => $item['serialnumber'], 'onClick' => 'this.select();']);
-                                    } else {
-                                        echo form_hidden('serialnumber', '');
-                                    }
-                                    ?>
+                                        <!-- Description Input Box (shown when has text or opened) -->
+                                        <div class="input-group input-group-sm desc-wrapper <?= $has_desc ? '' : 'hidden' ?>" 
+                                             id="desc_wrapper_<?= $line ?>" 
+                                             style="min-width: 320px; max-width: 550px;">
+                                            <span class="input-group-addon" style="background-color: #e3f2fd; color: #1976D2; font-size: 11px; font-weight: 600; border-color: #90caf9;">
+                                                <span class="glyphicon glyphicon-pencil"></span> Description
+                                            </span>
+                                            <input type="text" 
+                                                   name="description" 
+                                                   id="desc_input_<?= $line ?>" 
+                                                   class="form-control input-sm desc-input" 
+                                                   style="border-color: #90caf9;"
+                                                   value="<?= esc($item['description'] ?? '') ?>" 
+                                                   placeholder="Type custom note or description for this item..." 
+                                                   tabindex="<?= ++$tabindex ?>" 
+                                                   autocomplete="off" 
+                                                   onkeydown="if(event.key==='Escape' && this.value===''){ $('#desc_wrapper_<?= $line ?>').addClass('hidden'); $('#btn_add_desc_<?= $line ?>').removeClass('hidden'); }" />
+                                            <span class="input-group-btn">
+                                                <button type="button" 
+                                                        class="btn btn-default btn-sm" 
+                                                        title="Clear / Close" 
+                                                        style="border-color: #90caf9;"
+                                                        onclick="if($('#desc_input_<?= $line ?>').val()==''){ $('#desc_wrapper_<?= $line ?>').addClass('hidden'); $('#btn_add_desc_<?= $line ?>').removeClass('hidden'); } else { $('#desc_input_<?= $line ?>').val('').trigger('change'); }">
+                                                    <span class="glyphicon glyphicon-remove text-muted"></span>
+                                                </button>
+                                            </span>
+                                        </div>
+
+                                        <?php if ($item['is_serialized']) { ?>
+                                            <div class="input-group input-group-sm" style="max-width: 200px;">
+                                                <span class="input-group-addon" style="font-size: 11px; font-weight: 600; color: #555;">
+                                                    <?= lang(ucfirst($controller_name) . '.serial') ?>
+                                                </span>
+                                                <input type="text" 
+                                                       name="serialnumber" 
+                                                       class="form-control input-sm" 
+                                                       value="<?= esc($item['serialnumber']) ?>" 
+                                                       placeholder="Serial #" />
+                                            </div>
+                                        <?php } else { ?>
+                                            <?= form_hidden('serialnumber', '') ?>
+                                        <?php } ?>
+                                    </div>
                                 </td>
                             <?php } ?>
                         </tr>
@@ -831,6 +876,23 @@ helper('url');
                 }
             }
         }
+
+        // Quantity +/- stepper buttons
+        $(document).on('click', '.qty-plus', function() {
+            var line = $(this).data('line');
+            var $input = $('#qty_' + line);
+            var val = parseFloat($input.val()) || 1;
+            $input.val(val + 1).trigger('change');
+        });
+
+        $(document).on('click', '.qty-minus', function() {
+            var line = $(this).data('line');
+            var $input = $('#qty_' + line);
+            var val = parseFloat($input.val()) || 1;
+            if (val > 1) {
+                $input.val(val - 1).trigger('change');
+            }
+        });
 
         $('[name="price"],[name="quantity"],[name="discount"],[name="description"],[name="serialnumber"],[name="discounted_total"]').change(function() {
             $(this).parents('tr').prevAll('form:first').submit()

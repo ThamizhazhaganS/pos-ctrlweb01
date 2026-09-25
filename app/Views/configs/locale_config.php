@@ -27,9 +27,9 @@
                 </div>
                 <div class="col-xs-2">
                     <label class="control-label">
-                        <a href="https://github.com/opensourcepos/opensourcepos/wiki/Localisation-support" target="_blank">
+                        <span>
                             <span class="glyphicon glyphicon-info-sign" data-toggle="tooltip" data-placement="right" title="<?= lang('Config.number_locale_tooltip') ?>"></span>
-                        </a>
+                        </span>
                         <span id="number_locale_example">
                             &nbsp;&nbsp;<?= to_currency(1234567890.12300) ?>
                         </span>

@@ -10,7 +10,7 @@
     dialog_support.init("a.modal-dlg");
 </script>
 
-<h3 class="text-center">Welcome to <?= esc(config('OSPOS')->settings['company'] ?? 'GRAFF POS') ?>, click on a module to get started.</h3>
+<h3 class="text-center">Welcome to <?= esc(config('OSPOS')->settings['company'] ?? 'GRAFF KIDS') ?>, click on a module to get started.</h3>
 
 <div id="home_module_list">
     <?php foreach($allowed_modules as $module) { ?>

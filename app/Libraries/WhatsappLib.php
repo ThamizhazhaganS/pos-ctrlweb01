@@ -7,6 +7,7 @@ use App\Models\Appconfig;
 class WhatsappLib
 {
     private array $config;
+    private ?string $lastError = null;
 
     public function __construct()
     {
@@ -17,6 +18,11 @@ class WhatsappLib
             $config_assoc[$row['key']] = $row['value'];
         }
         $this->config = $config_assoc;
+    }
+
+    public function getLastError(): ?string
+    {
+        return $this->lastError;
     }
 
     /**
@@ -47,6 +53,7 @@ class WhatsappLib
             $phone_number_id = trim($this->config['meta_phone_number_id'] ?? '');
             
             if (empty($access_token) || empty($phone_number_id)) {
+                $this->lastError = 'Meta WhatsApp access token or phone number ID is missing.';
                 log_message('error', 'Meta WhatsApp configuration is missing.');
                 return false;
             }
@@ -69,6 +76,7 @@ class WhatsappLib
         $from_number = $this->config['twilio_whatsapp_number'] ?? '';
 
         if (empty($account_sid) || empty($auth_token) || empty($from_number)) {
+            $this->lastError = 'Twilio WhatsApp configuration is missing.';
             log_message('error', 'Twilio WhatsApp configuration is missing.');
             return false;
         }
@@ -92,8 +100,10 @@ class WhatsappLib
         curl_close($ch);
 
         if ($http_code >= 200 && $http_code < 300) {
+            $this->lastError = null;
             return true;
         } else {
+            $this->lastError = "Twilio Error (HTTP {$http_code}): {$response}";
             log_message('error', 'Twilio WhatsApp API Error: ' . $response);
             return false;
         }
@@ -101,15 +111,6 @@ class WhatsappLib
 
     /**
      * Send WhatsApp Message via Meta Template Engine
-     *
-     * @param string $phone Customer Phone number
-     * @param string $templateName Name of approved Meta Template
-     * @param string|null $headerType 'document', 'image', 'video', or null
-     * @param string|null $mediaUrl URL of header media
-     * @param string|null $filename Filename for document header
-     * @param array|string|null $bodyParams Dynamic variable replacement array [{{1}}, {{2}}, {{3}}, {{4}}]
-     * @param string|null $buttonParam Dynamic parameter for URL button
-     * @return bool
      */
     public function sendTemplate(
         string $phone,
@@ -125,6 +126,7 @@ class WhatsappLib
         $language_code = $this->config['whatsapp_template_language'] ?? 'en';
 
         if (empty($access_token) || empty($phone_number_id)) {
+            $this->lastError = 'Meta WhatsApp configuration is missing.';
             log_message('error', 'Meta WhatsApp configuration is missing.');
             return false;
         }
@@ -153,6 +155,11 @@ class WhatsappLib
                     'parameters' => [$header_param]
                 ];
             }
+        }
+
+        // Fallback for taz_market if body params empty
+        if ($templateName === 'taz_market' && empty($bodyParams)) {
+            $bodyParams = ['Valued Customer'];
         }
 
         // 2. Build Body Component for template variables (e.g. {{1}}, {{2}}, {{3}}, {{4}})
@@ -216,70 +223,161 @@ class WhatsappLib
     }
 
     /**
-     * Upload a PDF binary to Meta media endpoint and return the media ID.
+     * Upload binary content (image/pdf/video/audio) to Meta media endpoint and return media ID.
      */
-    public function uploadMedia(string $pdfContent, string $filename): string
+    public function uploadMediaBinary(string $content, string $filename, string $mimeType = 'application/pdf'): string
     {
         $access_token    = trim($this->config['meta_access_token'] ?? '');
         $phone_number_id = trim($this->config['meta_phone_number_id'] ?? '');
         if (empty($access_token) || empty($phone_number_id)) {
+            $this->lastError = 'Meta WhatsApp credentials missing for media upload.';
             throw new \RuntimeException('Meta WhatsApp config missing for media upload.');
         }
+
         $url      = "https://graph.facebook.com/v19.0/{$phone_number_id}/media";
         $boundary = '----FormBoundary' . bin2hex(random_bytes(8));
         $body = "--{$boundary}\r\nContent-Disposition: form-data; name=\"messaging_product\"\r\n\r\nwhatsapp\r\n"
-            . "--{$boundary}\r\nContent-Disposition: form-data; name=\"type\"\r\n\r\napplication/pdf\r\n"
-            . "--{$boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"{$filename}\"\r\nContent-Type: application/pdf\r\n\r\n"
-            . $pdfContent . "\r\n--{$boundary}--\r\n";
+            . "--{$boundary}\r\nContent-Disposition: form-data; name=\"type\"\r\n\r\n{$mimeType}\r\n"
+            . "--{$boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"{$filename}\"\r\nContent-Type: {$mimeType}\r\n\r\n"
+            . $content . "\r\n--{$boundary}--\r\n";
+
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_POST           => true,
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER     => ["Authorization: Bearer {$access_token}", "Content-Type: multipart/form-data; boundary={$boundary}"],
+            CURLOPT_HTTPHEADER     => [
+                "Authorization: Bearer {$access_token}",
+                "Content-Type: multipart/form-data; boundary={$boundary}"
+            ],
             CURLOPT_POSTFIELDS     => $body,
             CURLOPT_TIMEOUT        => 30,
         ]);
+
         $responseBody = curl_exec($ch);
         $httpCode     = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
+
         $decoded = json_decode($responseBody, true);
         if ($httpCode !== 200 || empty($decoded['id'])) {
-            throw new \RuntimeException("WhatsApp media upload failed (HTTP {$httpCode}): " . ($decoded['error']['message'] ?? $responseBody));
+            $errMsg = $decoded['error']['message'] ?? $responseBody;
+            $this->lastError = "Media upload failed: {$errMsg}";
+            throw new \RuntimeException("WhatsApp media upload failed (HTTP {$httpCode}): {$errMsg}");
         }
-        log_message('info', "WhatsApp: media uploaded, ID={$decoded['id']}");
+
+        log_message('info', "WhatsApp: media uploaded successfully, ID={$decoded['id']}");
         return (string) $decoded['id'];
     }
 
     /**
-     * Send a Meta template using an already-uploaded media ID.
+     * Upload a PDF binary to Meta media endpoint and return the media ID.
      */
-    public function sendTemplateWithMediaId(string $phone, string $templateName, string $mediaId, string $filename, array $bodyParams = []): bool
+    public function uploadMedia(string $pdfContent, string $filename): string
     {
+        return $this->uploadMediaBinary($pdfContent, $filename, 'application/pdf');
+    }
+
+    /**
+     * Upload a local file (e.g. image/poster/brochure) to Meta media endpoint and return media ID.
+     */
+    public function uploadMediaFile(string $filePath): string
+    {
+        if (!file_exists($filePath)) {
+            throw new \RuntimeException("Media file not found: {$filePath}");
+        }
+
+        $content = file_get_contents($filePath);
+        $filename = basename($filePath);
+        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+
+        $mimeMap = [
+            'png'  => 'image/png',
+            'jpg'  => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'gif'  => 'image/gif',
+            'webp' => 'image/webp',
+            'pdf'  => 'application/pdf',
+            'mp4'  => 'video/mp4'
+        ];
+        $mimeType = $mimeMap[$ext] ?? 'application/octet-stream';
+
+        return $this->uploadMediaBinary($content, $filename, $mimeType);
+    }
+
+    /**
+     * Send a Meta template using an already-uploaded media ID.
+     * Supports document (PDF invoice) and image (marketing poster).
+     */
+    public function sendTemplateWithMediaId(
+        string $phone,
+        string $templateName,
+        string $mediaId,
+        string $filename = '',
+        array $bodyParams = [],
+        string $headerType = 'document'
+    ): bool {
         $access_token    = trim($this->config['meta_access_token'] ?? '');
         $phone_number_id = trim($this->config['meta_phone_number_id'] ?? '');
-        $language_code   = $this->config['whatsapp_template_language'] ?? 'en_US';
+        $language_code   = $this->config['whatsapp_template_language'] ?? 'en';
+
         if (empty($access_token) || empty($phone_number_id)) {
+            $this->lastError = 'Meta WhatsApp credentials missing for sendTemplateWithMediaId.';
             log_message('error', 'Meta WhatsApp config missing for sendTemplateWithMediaId.');
             return false;
         }
-        $phone = ltrim($this->formatPhone($phone), '+')
-;
+
+        $phone = ltrim($this->formatPhone($phone), '+');
         $url   = "https://graph.facebook.com/v19.0/{$phone_number_id}/messages";
-        $components = [[
-            'type'       => 'header',
-            'parameters' => [['type' => 'document', 'document' => ['id' => $mediaId, 'filename' => $filename]]],
-        ]];
+
+        if ($headerType === 'image') {
+            $headerParam = [
+                'type'  => 'image',
+                'image' => ['id' => $mediaId]
+            ];
+        } elseif ($headerType === 'video') {
+            $headerParam = [
+                'type'  => 'video',
+                'video' => ['id' => $mediaId]
+            ];
+        } else {
+            $docParam = ['id' => $mediaId];
+            if (!empty($filename)) {
+                $docParam['filename'] = $filename;
+            }
+            $headerParam = [
+                'type'     => 'document',
+                'document' => $docParam
+            ];
+        }
+
+        $components = [
+            [
+                'type'       => 'header',
+                'parameters' => [$headerParam]
+            ]
+        ];
+
+        // Ensure body param is present for templates requiring it (e.g. taz_market)
+        if ($templateName === 'taz_market' && empty($bodyParams)) {
+            $bodyParams = ['Valued Customer'];
+        }
+
         if (!empty($bodyParams)) {
             $textParams = array_map(fn($p) => ['type' => 'text', 'text' => (string)$p], $bodyParams);
             $components[] = ['type' => 'body', 'parameters' => $textParams];
         }
+
         $payload = [
             'messaging_product' => 'whatsapp',
             'recipient_type'    => 'individual',
             'to'                => $phone,
             'type'              => 'template',
-            'template'          => ['name' => $templateName, 'language' => ['code' => $language_code], 'components' => $components],
+            'template'          => [
+                'name'       => $templateName,
+                'language'   => ['code' => $language_code],
+                'components' => $components
+            ]
         ];
+
         return $this->postToMeta($url, $access_token, $payload);
     }
 
@@ -303,9 +401,16 @@ class WhatsappLib
         curl_close($ch);
 
         if ($http_code >= 200 && $http_code < 300) {
+            $this->lastError = null;
             log_message('info', 'Meta WhatsApp Sent Successfully: ' . $response);
             return true;
         } else {
+            $errData = json_decode($response, true);
+            $msg = $errData['error']['message'] ?? "HTTP {$http_code}";
+            if (!empty($errData['error']['error_data']['details'])) {
+                $msg .= ' (' . $errData['error']['error_data']['details'] . ')';
+            }
+            $this->lastError = $msg;
             log_message('error', 'Meta WhatsApp API Error (HTTP ' . $http_code . '): ' . $response);
             return false;
         }

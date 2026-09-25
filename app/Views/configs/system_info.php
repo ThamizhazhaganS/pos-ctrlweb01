@@ -196,7 +196,7 @@ use Config\OSPOS;
 </div>
 
 <div style="text-align: center;">
-    <a class="copy" data-clipboard-action="copy" data-clipboard-target="#issuetemplate">Copy Info</a> | <a href="https://github.com/opensourcepos/opensourcepos/issues/new" target="_blank"> <?= lang('Config.report_an_issue') ?></a>
+    <a class="copy" data-clipboard-action="copy" data-clipboard-target="#issuetemplate">Copy Info</a> | <a href="https://graffkids.com" target="_blank"> <?= lang('Config.report_an_issue') ?></a>
     <script type="text/javascript">
         var clipboard = new ClipboardJS('.copy');
 

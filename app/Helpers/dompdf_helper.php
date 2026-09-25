@@ -5,19 +5,25 @@
  */
 function create_pdf(string $html, string $filename = ''): string
 {
-    // Security: Disable PHP execution in PDFs to prevent RCE attacks
-    // Security: Disable remote file access to prevent SSRF attacks
-    // Only local files referenced in HTML are allowed
-    $dompdf = new Dompdf\Dompdf([
-        'isRemoteEnabled' => false,
-        'isPhpEnabled' => false
-    ]);
+    // Configure Dompdf with DejaVu Sans to support Indian Rupee (₹) and UTF-8 characters
+    $options = new Dompdf\Options();
+    $options->setIsRemoteEnabled(true);
+    $options->setIsPhpEnabled(false);
+    $options->setDefaultFont('DejaVu Sans');
+
+    $dompdf = new Dompdf\Dompdf($options);
+    
+    // Ensure UTF-8 meta tag exists if missing
+    if (stripos($html, 'charset') === false) {
+        $html = '<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>' . $html;
+    }
+
     $dompdf->loadHtml(str_replace(['\n', '\r'], '', $html));
     $dompdf->render();
 
     if ($filename != '') {
         $dompdf->stream($filename . '.pdf');
-    } else {    // TODO: Not all paths return a value.
+    } else {
         return $dompdf->output();
     }
 

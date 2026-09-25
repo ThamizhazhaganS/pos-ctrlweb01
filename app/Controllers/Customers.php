@@ -144,38 +144,57 @@ class Customers extends Persons
      */
     public function bulk_message(): string
     {
-        $customer_ids = $this->request->getPost('customer_ids');
-        $ids = explode(',', $customer_ids);
-        
-        $contacts = [];
-        if (!empty($ids)) {
-            // Check if "all" was selected
-            if (in_array('all', $ids)) {
-                $customers = $this->customer->get_all()->getResult();
-                foreach ($customers as $customer) {
-                    if (!empty($customer->phone_number)) {
-                        $contacts[] = $customer->phone_number;
-                    }
-                    if (!empty($customer->email)) {
-                        $contacts[] = $customer->email;
-                    }
-                }
-            } else {
-                foreach ($ids as $id) {
-                    $info = $this->customer->get_info((int)$id);
-                    if (!empty($info->phone_number)) {
-                        $contacts[] = $info->phone_number;
-                    }
-                    if (!empty($info->email)) {
-                        $contacts[] = $info->email;
-                    }
-                }
+        $customer_ids = (string)$this->request->getPost('customer_ids');
+        $ids = array_filter(array_map('trim', explode(',', $customer_ids)));
+
+        $all_customers = $this->customer->get_all()->getResult();
+        $customer_list = [];
+        $selected_ids = [];
+        $all_phones = [];
+        $all_emails = [];
+
+        foreach ($all_customers as $customer) {
+            $name = trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''));
+            if (empty($name) && !empty($customer->company_name)) {
+                $name = trim($customer->company_name);
+            }
+            if (empty($name)) {
+                $name = 'Customer #' . $customer->person_id;
+            }
+
+            $phone = trim($customer->phone_number ?? '');
+            $email = trim($customer->email ?? '');
+
+            if (!empty($phone)) {
+                $all_phones[] = $phone;
+            }
+            if (!empty($email)) {
+                $all_emails[] = $email;
+            }
+
+            $customer_list[] = [
+                'person_id' => (int)$customer->person_id,
+                'name'      => $name,
+                'phone'     => $phone,
+                'email'     => $email,
+            ];
+
+            if (in_array('all', $ids) || in_array((string)$customer->person_id, $ids)) {
+                $selected_ids[] = (int)$customer->person_id;
             }
         }
-        
-        $contacts = array_unique(array_filter($contacts));
-        $data['phone'] = implode(',', $contacts);
-        
+
+        $data = [
+            'meta_marketing_template' => $this->config['meta_marketing_template'] ?? 'taz_market',
+            'whatsapp_provider'       => $this->config['whatsapp_api_provider'] ?? 'meta',
+            'customer_list'           => $customer_list,
+            'selected_customer_ids'   => $selected_ids,
+            'all_customer_phones'     => implode(', ', array_values(array_unique($all_phones))),
+            'all_customer_emails'     => implode(', ', array_values(array_unique($all_emails))),
+            'customer_count'          => count($customer_list),
+            'phone'                   => ''
+        ];
+
         return view('messages/sms', $data);
     }
 
