@@ -57,7 +57,7 @@
 
                                 <!-- Full Multi-Select Customer Dropdown -->
                                 <div style="margin-bottom: 8px;">
-                                    <select id="customer_select" class="selectpicker show-tick form-control" multiple 
+                                    <select id="customer_select" class="selectpicker show-tick form-control" multiple data-style="btn-default customer-select-btn" 
                                             data-width="100%"
                                             data-live-search="true" 
                                             data-live-search-placeholder="Filter customers..."
@@ -371,6 +371,36 @@
 </script>
 
 <style>
+.customer-select-btn {
+    background-color: #ffffff !important;
+    color: #1a202c !important;
+    border: 2px solid #2b6cb0 !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    padding: 10px 14px !important;
+    height: auto !important;
+    min-height: 44px !important;
+    border-radius: 6px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+.customer-select-btn:hover,
+.customer-select-btn:focus,
+.customer-select-btn:active {
+    background-color: #f7fafc !important;
+    border-color: #2c5282 !important;
+    color: #1a202c !important;
+}
+.bootstrap-select > .btn.customer-select-btn .filter-option,
+.bootstrap-select > .btn.customer-select-btn .filter-option-inner-inner {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #1a202c !important;
+}
+.bootstrap-select > .btn.customer-select-btn .bs-caret .caret {
+    border-top: 6px solid #2b6cb0 !important;
+    border-right: 5px solid transparent !important;
+    border-left: 5px solid transparent !important;
+}
 .recipient-pill:hover {
     background-color: #d9534f !important;
     text-decoration: line-through;
