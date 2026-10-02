@@ -5,7 +5,7 @@
         <div class="panel panel-info">
             <div class="panel-heading">
                 <h3 class="panel-title">
-                    <span class="glyphicon glyphicon-bullhorn">&nbsp;</span><?= lang('Messages.sms_send') ?> / Bulk Marketing Campaign
+                    <span class="glyphicon glyphicon-bullhorn">&nbsp;</span>WhatsApp & SMS Marketing Campaign
                 </h3>
             </div>
             <div class="panel-body">
